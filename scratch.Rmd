@@ -1,0 +1,54 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+
+```{r}
+library(tesseract)
+library(data.table)
+```
+
+
+```{r}
+eng <- tesseract("eng")
+
+cat(ocr("test4.png",engine = tesseract('eng',
+                                          options = list(
+                                            	tosp_table_xht_sp_ratio = 0.8,
+                                          
+                                            #tessedit_char_whitelist = '0123456789.-',
+                                            #tessedit_pageseg_mode = 'auto',
+                                            textord_tabfind_find_tables = "1",
+                                           tosp_min_sane_kn_sp = 0.3,
+                                            preserve_interword_spaces = "1",
+                                            textord_tablefind_recognize_tables = "1"
+                                            )
+                                       )))
+
+sign <- ocr("test4.png",engine = tesseract('eng',
+                                          options = list(
+                                            	tosp_table_xht_sp_ratio = 0.8,
+                                          
+                                            #tessedit_char_whitelist = '0123456789.-',
+                                            #tessedit_pageseg_mode = 'auto',
+                                            textord_tabfind_find_tables = TRUE,
+                                            #tosp_min_sane_kn_sp = 
+                                            preserve_interword_spaces = "1",
+                                            textord_tablefind_recognize_tables = TRUE
+                                            )
+                                       ))
+```
+
+```{r}
+fread(sign, sep="\s" )
+```
+
+```{r}
+test <- ocv_read("test2.png")
+tested_cv<- ocv_edges(test)
+```
+
