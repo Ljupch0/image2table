@@ -4,11 +4,10 @@ library(shinyWidgets)
 library(shinydashboard)
 library(tesseract)
 library(jsonlite)
-library(tibble)
 library(magick)
 library(DT)
 library(stringi)
-library(dplyr)
+library(tidyverse)
 
 js <- '
     $(document).ready(function() {
@@ -132,6 +131,7 @@ ui <- fluidPage(
              p("Select the number of columns you'd like to extract.
                Then draw and tag the column borders on your table image."),
              p("For best results use large images, make your column selections wide and don't select the column names."),
+             p("WARNING: Currently the converter doesn't support multi-line cells or empty cells. Your results will be wrong."),
              radioGroupButtons(inputId = "column_number",
                                label = "Number of Columns",
                                selected = character(0),
