@@ -4,6 +4,9 @@ library(shinyWidgets)
 library(shinydashboard)
 library(tesseract)
 library(jsonlite)
+library(tidyverse)
+library(magick)
+library(DT)
 
 js <- '
     $(document).ready(function() {
@@ -97,12 +100,10 @@ ui <- fluidPage(
                    multiple = FALSE,
                    width = "100%"),
      fluidRow(
-         box("Table Image",
-             imageOutput("image")),
          box("Table HTML",
              textOutput("location"),
              textInput("image_url", "Paste image URL"),
-             selectInput("category_type", "Label Category", c("animals", "fruits")),
+             numericInput("column_number", "Number of Columns", value = NULL),
              div(HTML(
                  '<input id="reset_button" type="reset" />'
              )),
@@ -115,7 +116,12 @@ ui <- fluidPage(
          ),
          box(title = NULL,
              width = 12,
-             div(id = "bbox_annotator", style = "display:inline-block"))
+             div(id = "bbox_annotator", style = "display:inline-block"),
+             actionBttn("crop","Create Table", style = "material-flat", size = "sm", color = "primary", block = TRUE),
+             verbatimTextOutput("crop_strings"),
+             verbatimTextOutput("image_crop"),
+             DTOutput("final_table") )
+         
      )
  )
     
@@ -123,46 +129,72 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-
-    output$image <- renderImage({
-        req(input$table_pic)
-        list( src = input$table_pic$datapath,
-              width = "100%")
-    })
-    
-    
     
     output$location <- renderText(input$table_pic$datapath)
     
-    observeEvent(input$table_pic, {
-        #session$sendCustomMessage("change-img-url", paste0("file://", gsub("\\\\", "/", input$table_pic$datapath)) )
+    observeEvent(input$image_url, {
         session$sendCustomMessage("change-img-url", input$image_url )
-        
         })
     
-    #works
-    output$rectangles <- renderPrint({
 
-            as.data.frame(jsonlite::fromJSON(input$rectCoord))
+    output$rectangles <- renderPrint({
+            as_tibble(jsonlite::fromJSON(input$rectCoord))
     })
     
     
     
     
-    observeEvent(input$category_type, {
-        vals <- switch(input$category_type, 
-                       fruits = list("yellow" = "banana", 
-                                     "orange" = "pineapple",
-                                     "pink" = "grapefruit"),
-                       animals = list("grey" = "raccoon",
-                                      "brown" = "dog",
-                                      "tan" = "cat")
-        )
+    observeEvent(input$column_number, {
+        
+        
+        
+        colfunc <- colorRampPalette(c("blue", "orange"))
+        colors_vector <- c(colfunc(if (is.na(input$column_number)) 1 else input$column_number))
+        
+        ncol <- seq(from=1, to = if (is.na(input$column_number)) 1 else input$column_number, by=1)
+        cols_vector <- paste0("column", ncol)
+        
+        vals <- as.list(setNames(cols_vector, colors_vector))
+        
+        
         # update category list
         session$sendCustomMessage("update-category-list", vals)
         # redraw rectangles
         session$sendCustomMessage("redraw-rects", input$rectCoord)
     })
+    
+   html_table <- eventReactive(input$crop, {
+       crops <- as_tibble(jsonlite::fromJSON(input$rectCoord)) %>% arrange (label)
+       
+       ncol <- seq(from=1, to = if (is.na(input$column_number)) 1 else input$column_number, by=1)
+       cols_vector <- paste0("column", ncol)
+   
+       
+       crop_strings <- paste0(crops$width,"x", crops$height, "+", crops$left, "+", crops$top)
+       
+       crop_strings <- as.list(setNames( crop_strings, cols_vector))
+       
+       output$crop_strings <- renderPrint({crop_strings})
+       
+       table_image <- image_read(input$image_url)
+       
+       images_cropped <- map(crop_strings, .f = image_crop, image = table_image)
+       
+       output$image_crop <- renderPrint(images_cropped)
+       
+       
+       ocr_text <- map(images_cropped, ocr, engine = tesseract('eng'))
+       ocr_text <- str_split(ocr_text,  pattern="\\n")
+       
+       names(ocr_text) <- cols_vector
+       
+       as_tibble(Reduce(rbind, ocr_text))
+   })
+   
+   
+   output$final_table <- renderDT(html_table)
+   
+    
     
 }
 

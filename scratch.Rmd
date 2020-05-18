@@ -52,3 +52,75 @@ test <- ocv_read("test2.png")
 tested_cv<- ocv_edges(test)
 ```
 
+
+
+
+
+```{r}
+install.packages("datapasta")
+
+
+```
+
+
+```{r}
+tibble::tribble(
+                                 ~left...top.width.height.label...color,
+                               "<int> <int> <int>  <int> <chr>   <chr>",
+                                   "1     6    11    96    150 column2",
+                                   "2   115    13    92    149 column1",
+                                   "3   219     6    43    163 column3"
+                               )
+```
+
+```{r}
+
+crops <- tibble(
+  width = c(200, 200, 200),
+  height = c(200,200, 200),
+  left = c(70, 70, 70),
+  top = c(30, 60, 90),
+  label = c("column1", "column2", "column3")
+)
+
+
+ crop_strings <- paste0(crops$width,"x", crops$height, "+", crops$left, "+", crops$top)
+```
+
+
+
+
+```{r}
+image <- image_read("https://pubs.spe.org/media/filer_public/bf/a7/bfa78106-5792-4388-ad34-610f41a4552d/jpt_2018-05_techupdatef1.jpg")
+
+
+images_cropped <- map(crop_strings, .f = image_crop, image=image)
+
+
+
+ocr_text <- map(images_cropped, ocr, engine = tesseract('eng'))
+ocr_text <- str_split(ocr_text,  patter="\\n")
+
+names(ocr_text) <- c("column1", "column2", "column3")
+
+as_tibble(Reduce(rbind, ocr_text))
+```
+
+
+
+
+```{r}
+test_list <- list(
+  "a" = c(1, 2, 3),
+  "b" = c(4, 5, 6),
+  "c" = c(4, 7, 6)
+  
+)
+
+
+```
+
+
+
+
+
