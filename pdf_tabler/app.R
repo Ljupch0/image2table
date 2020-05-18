@@ -13,7 +13,7 @@ js <- '
     $(document).ready(function() {
        // define options to pass to bounding box constructor
         var options = {
-          url: "https://www.r-project.org/logo/Rlogo.svg",
+          url: "",
           input_method: "select", 
           labels: [""],
           color_list:  [""], 
@@ -74,10 +74,11 @@ js <- '
 ui <- fluidPage(
 
     
-    titlePanel("PDF Tabler",
+    titlePanel("Image2Table",
                useShinydashboard()),
     tags$head(
         tags$style(HTML("
+        /*
                .input-group-btn:first-child > .btn, .input-group-btn:first-child
                > .btn-group { padding: 40px 70px; font-size: 18px;}
                
@@ -86,43 +87,69 @@ ui <- fluidPage(
                .input-group-btn:last-child > .btn, .input-group-btn:last-child > .btn-group > .btn,
                .input-group-btn:last-child > .dropdown-toggle { padding: 52.5px; background-color: white; font-size: 25px;}
                
+    */           
+               .box { font-size: 20px; }
+               
                label.control-label {font-size: large;}
+               
+               #image_url {padding: 21px; border-radius: 5px; }
+               
+               body {background-color: #e6e6e6;}
+               
+               h2 {
+    margin-left: 15px;
+}
             "))
     ),
     tags$head(tags$script(HTML(js)),
               tags$head(
                   tags$script(src = "bbox_annotation.js")
-              )),
+                  )),
     
  fluidPage(
-     br(),
-         fileInput("table_pic", "Upload a cropped pic of your table",
-                   buttonLabel = "Drag your image file here",
-                   multiple = FALSE,
-                   width = "100%"),
+     #br(),
+     #    fileInput("table_pic", "Upload a cropped pic of your table",
+     #              buttonLabel = "Drag your image file here",
+     #              multiple = FALSE,
+     #              width = "100%"),
      fluidRow(
-         box("Table HTML",
-             textOutput("location"),
-             textInput("image_url", "Paste image URL"),
-             numericInput("column_number", "Number of Columns", value = NULL),
-             div(HTML(
-                 '<input id="reset_button" type="reset" />'
-             )),
-             HTML(
-                 '<input id="annotation_data" name="annotation_data" type="hidden" />'
-             ),
-             hr(),
-             h4("Entries"),
-             verbatimTextOutput("rectangles")
-         ),
+         box(
+             width = 12,
+             p("Image2Table unlocks the data stuck in a table image or PDF report.
+                The outcome is an html table that can be copied and pasted into Excel, or immediately downloaded in CSV or Excel format.
+               To get started, paste a URL link of an image containing your table."),
+             textInput("image_url", "Paste Table Image URL", value = NULL, placeholder="https://i.ibb.co/QnMxcyk/test4.png"),
+             radioGroupButtons(inputId = "column_number",
+                               label = "Number of Columns",
+                               selected = character(0),
+                               choices=c(1,2, 3, 4, 5, 6, 7, 8, 9, 10),
+                               justified = TRUE,
+                               size = "lg"
+                               ),
+             
+             
+            # div(HTML(
+            #     '<input id="reset_button" type="reset" />'
+            # )),
+         ),  
          box(title = NULL,
              width = 12,
              div(id = "bbox_annotator", style = "display:inline-block"),
-             actionBttn("crop","Create Table", style = "material-flat", size = "sm", color = "primary", block = TRUE),
-             verbatimTextOutput("crop_strings"),
-             verbatimTextOutput("image_crop"),
-             verbatimTextOutput("ocr_text"),
-             DTOutput("final_table") )
+             br(),
+             br(),
+             splitLayout(actionBttn("crop","Create Table", style = "material-flat", color = "primary", block = TRUE),
+                         actionBttn("reset_button", "Reset Selections", style = "material-flat", color="danger", block = TRUE),
+                         cellWidths = c("75%", "25%"))
+             
+             
+             #verbatimTextOutput("crop_strings"),
+             #verbatimTextOutput("image_crop"),
+             #verbatimTextOutput("ocr_text"),
+             ),
+         box("Liberated Table",
+             width = 12,
+             DTOutput("final_table") 
+         )
          
      )
  )
@@ -132,10 +159,8 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
     
-    output$location <- renderText(input$table_pic$datapath)
-    
     observeEvent(input$image_url, {
-        session$sendCustomMessage("change-img-url", input$image_url )
+            session$sendCustomMessage("change-img-url", input$image_url )
         })
     
 
@@ -147,8 +172,6 @@ server <- function(input, output, session) {
     
     
     observeEvent(input$column_number, {
-        
-        
         
         colfunc <- colorRampPalette(c("blue", "orange"))
         colors_vector <- c(colfunc(if (is.na(input$column_number)) 1 else input$column_number))
@@ -176,19 +199,19 @@ server <- function(input, output, session) {
        
        crop_strings <- as.list(setNames( crop_strings, cols_vector))
        
-       output$crop_strings <- renderPrint({crop_strings})
+       #output$crop_strings <- renderPrint({crop_strings})
        
        table_image <- image_read(input$image_url)
        
        images_cropped <- map(crop_strings, .f = image_crop, image = table_image)
        
-       output$image_crop <- renderPrint(images_cropped)
+       #output$image_crop <- renderPrint(images_cropped)
        
        
        ocr_text <- map(images_cropped, ocr, engine = tesseract('eng'))
        ocr_text <- str_split(ocr_text,  pattern="\\n")
        
-       output$ocr_text <- renderPrint(ocr_text)
+       #output$ocr_text <- renderPrint(ocr_text)
        
        names(ocr_text) <- cols_vector
        
@@ -199,7 +222,16 @@ server <- function(input, output, session) {
    
    
    output$final_table <- renderDT({
-       datatable(html_table())
+       datatable(data=html_table(),
+                 style = "bootstrap",
+                 selection = "none",
+                 extensions = c('Buttons'),
+                 rownames = FALSE,
+                 options = list(dom = 'Bt',
+                                buttons = c('copy', 'csv', 'excel'),
+                                scrollY = 500)
+                 
+                 )
        })
    
     
