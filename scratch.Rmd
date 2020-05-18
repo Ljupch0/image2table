@@ -95,11 +95,13 @@ image <- image_read("https://pubs.spe.org/media/filer_public/bf/a7/bfa78106-5792
 
 
 images_cropped <- map(crop_strings, .f = image_crop, image=image)
+```
 
 
-
+```{r}
 ocr_text <- map(images_cropped, ocr, engine = tesseract('eng'))
 ocr_text <- str_split(ocr_text,  patter="\\n")
+ocr_text <- map(ocr_text, stri_remove_empty)
 
 names(ocr_text) <- c("column1", "column2", "column3")
 
@@ -117,7 +119,7 @@ test_list <- list(
   
 )
 
-
+as_tibble(do.call(cbind, test_list))
 ```
 
 

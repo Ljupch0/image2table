@@ -7,6 +7,7 @@ library(jsonlite)
 library(tidyverse)
 library(magick)
 library(DT)
+library(stringi)
 
 js <- '
     $(document).ready(function() {
@@ -120,6 +121,7 @@ ui <- fluidPage(
              actionBttn("crop","Create Table", style = "material-flat", size = "sm", color = "primary", block = TRUE),
              verbatimTextOutput("crop_strings"),
              verbatimTextOutput("image_crop"),
+             verbatimTextOutput("ocr_text"),
              DTOutput("final_table") )
          
      )
@@ -186,13 +188,19 @@ server <- function(input, output, session) {
        ocr_text <- map(images_cropped, ocr, engine = tesseract('eng'))
        ocr_text <- str_split(ocr_text,  pattern="\\n")
        
+       output$ocr_text <- renderPrint(ocr_text)
+       
        names(ocr_text) <- cols_vector
        
-       as_tibble(Reduce(rbind, ocr_text))
+       ocr_text <- map(ocr_text, stri_remove_empty)
+       
+       as_tibble(do.call(cbind, ocr_text))
    })
    
    
-   output$final_table <- renderDT(html_table)
+   output$final_table <- renderDT({
+       datatable(html_table())
+       })
    
     
     
