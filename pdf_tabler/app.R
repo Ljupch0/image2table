@@ -4,10 +4,11 @@ library(shinyWidgets)
 library(shinydashboard)
 library(tesseract)
 library(jsonlite)
-library(tidyverse)
+library(tibble)
 library(magick)
 library(DT)
 library(stringi)
+library(dplyr)
 
 js <- '
     $(document).ready(function() {
@@ -119,13 +120,7 @@ ui <- fluidPage(
                 The outcome is an html table that can be copied and pasted into Excel, or immediately downloaded in CSV or Excel format.
                To get started, paste a URL link of an image containing your table."),
              textInput("image_url", "Paste Table Image URL", value = NULL, placeholder="https://i.ibb.co/QnMxcyk/test4.png"),
-             radioGroupButtons(inputId = "column_number",
-                               label = "Number of Columns",
-                               selected = character(0),
-                               choices=c(1,2, 3, 4, 5, 6, 7, 8, 9, 10),
-                               justified = TRUE,
-                               size = "lg"
-                               ),
+             
              
              
             # div(HTML(
@@ -134,6 +129,16 @@ ui <- fluidPage(
          ),  
          box(title = NULL,
              width = 12,
+             p("Select the number of columns you'd like to extract.
+               Then draw and tag the column borders on your table image."),
+             p("For best results use large images, make your column selections wide and don't select the column names."),
+             radioGroupButtons(inputId = "column_number",
+                               label = "Number of Columns",
+                               selected = character(0),
+                               choices=c(1,2, 3, 4, 5, 6, 7, 8, 9, 10),
+                               justified = TRUE,
+                               size = "lg"
+             ),
              div(id = "bbox_annotator", style = "display:inline-block"),
              br(),
              br(),
@@ -229,7 +234,9 @@ server <- function(input, output, session) {
                  rownames = FALSE,
                  options = list(dom = 'Bt',
                                 buttons = c('copy', 'csv', 'excel'),
-                                scrollY = 500)
+                                scrollY = 500,
+                                paging = FALSE
+                                )
                  
                  )
        })
